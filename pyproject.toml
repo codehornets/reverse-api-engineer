@@ -1,0 +1,27 @@
+[project]
+name = "reverse-api"
+version = "0.1.0"
+description = "A tool to capture browser traffic for API reverse engineering"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "playwright>=1.40.0",
+    "click>=8.1.0",
+    "claude-agent-sdk>=0.1.0",
+    "rich>=13.0.0",
+    "questionary>=2.0.0",
+    "requests>=2.32.5",
+]
+
+[project.scripts]
+reverse-api = "reverse_api.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reverse_api"]
+
+[dependency-groups]
+dev = []
