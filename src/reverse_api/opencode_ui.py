@@ -201,6 +201,33 @@ class OpenCodeUI:
         # Usually means we're done
         pass
     
+    def session_diff(self, diffs: list) -> None:
+        """Display file changes summary."""
+        if not diffs:
+            return
+        
+        total_add = sum(d.get("additions", 0) for d in diffs)
+        total_del = sum(d.get("deletions", 0) for d in diffs)
+        
+        files_summary = f"{len(diffs)} file{'s' if len(diffs) > 1 else ''}"
+        changes = []
+        if total_add:
+            changes.append(f"+{total_add}")
+        if total_del:
+            changes.append(f"-{total_del}")
+        
+        change_str = " ".join(changes) if changes else ""
+        self.console.print(f"  [dim]diff:[/dim] {files_summary} {change_str}")
+    
+    def session_compacted(self) -> None:
+        """Display context compaction notification."""
+        self.console.print(f"  [dim]context compacted[/dim]")
+    
+    def session_retry(self, attempt: int, message: str) -> None:
+        """Display retry status."""
+        reason = message if message else "retrying..."
+        self.console.print(f"  [yellow]⟳[/yellow] [dim]attempt {attempt}:[/dim] {reason}")
+    
     def _summarize_input(self, tool_name: str, tool_input: dict) -> str:
         """Create a brief summary of tool input."""
         tool_lower = tool_name.lower()

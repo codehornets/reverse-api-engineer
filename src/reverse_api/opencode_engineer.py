@@ -192,7 +192,12 @@ class OpenCodeEngineer(BaseEngineer):
                         status_type = status.get("type", "idle")
                         debug_log(f"session.status: sessionID={event_sid}, status={status_type}")
                         if event_sid == self._session_id:
-                            self.opencode_ui.session_status(status_type)
+                            if status_type == "retry":
+                                attempt = status.get("attempt", 1)
+                                message = status.get("message", "")
+                                self.opencode_ui.session_retry(attempt, message)
+                            else:
+                                self.opencode_ui.session_status(status_type)
                             
                             if status_type == "idle":
                                 debug_log("Our session status is idle, returning!")
@@ -238,17 +243,50 @@ class OpenCodeEngineer(BaseEngineer):
                             debug_log(f"file.edited: {file_path}")
                             self.opencode_ui.file_edited(file_path)
                     
+                    elif event_type == "session.diff":
+                        event_sid = properties.get("sessionID")
+                        diffs = properties.get("diff", [])
+                        if event_sid == self._session_id and diffs:
+                            debug_log(f"session.diff: {len(diffs)} files changed")
+                            self.opencode_ui.session_diff(diffs)
+                    
+                    elif event_type == "session.compacted":
+                        event_sid = properties.get("sessionID")
+                        if event_sid == self._session_id:
+                            debug_log("session.compacted")
+                            self.opencode_ui.session_compacted()
+                    
                     elif event_type == "session.error":
+                        event_sid = properties.get("sessionID")
+                        if event_sid != self._session_id:
+                            debug_log(f"session.error for other session {event_sid}, ignoring")
+                            continue
+                        
                         error_obj = properties.get("error", {})
                         debug_log(f"session.error: {error_obj}")
+                        
+                        # Parse error with type-specific handling
                         if isinstance(error_obj, dict):
-                            # UnknownError format: {name, data: {message}}
-                            name = error_obj.get("name", "")
-                            data = error_obj.get("data", {})
-                            message = data.get("message", "") if isinstance(data, dict) else str(data)
-                            self._last_error = f"{name}: {message}" if name else message
+                            error_name = error_obj.get("name", "UnknownError")
+                            error_data = error_obj.get("data", {})
+                            
+                            if error_name == "ProviderAuthError":
+                                provider = error_data.get("providerID", "unknown")
+                                msg = error_data.get("message", "Authentication failed")
+                                self._last_error = f"Auth error ({provider}): {msg}"
+                            elif error_name == "APIError":
+                                msg = error_data.get("message", "API error")
+                                status = error_data.get("statusCode", "")
+                                self._last_error = f"API error{' (' + str(status) + ')' if status else ''}: {msg}"
+                            elif error_name == "MessageAbortedError":
+                                self._last_error = "Aborted"
+                            else:
+                                msg = error_data.get("message", "") if isinstance(error_data, dict) else str(error_data)
+                                self._last_error = f"{error_name}: {msg}" if msg else error_name
                         else:
                             self._last_error = str(error_obj)
+                        
+                        self.opencode_ui.error(self._last_error)
                         return
                         
         except httpx.ReadError as e:
