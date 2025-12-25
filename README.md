@@ -17,10 +17,17 @@
 - 🌐 **Browser Automation**: Built on Playwright with stealth mode for realistic browsing
 - 📊 **HAR Recording**: Captures all network traffic in HTTP Archive format
 - 🤖 **AI-Powered Generation**: Uses Claude 4.5 to analyze traffic and generate clean Python code
+- 🔌 **OpenCode SDK Support**: Native integration with OpenCode SDK for more flexibility
 - 💻 **Interactive CLI**: Minimalist terminal interface with mode cycling (Shift+Tab)
 - 📦 **Production Ready**: Generated scripts include error handling, type hints, and documentation
 - 💾 **Session History**: All runs saved locally with full message logs
 - 💰 **Cost Tracking**: Detailed token usage and cost estimation with cache support
+
+## Limitations
+
+- This tool executes code locally using Claude Code please monitor output.
+
+- Some websites employ advanced bot-detection and anti-automation protections, which may limit capture or require additional manual interaction.
 
 ## 🚀 Installation
 
@@ -109,9 +116,18 @@ Settings are stored in `~/.reverse-api/config.json`:
 ```json
 {
   "model": "claude-sonnet-4-5",
+  "sdk": "claude",
   "output_dir": null
 }
 ```
+
+### SDK Selection
+
+Choose between two SDKs:
+- **OpenCode**: Uses OpenCode SDK for AI-powered reverse engineering. Requires OpenCode to be running locally.
+- **Claude** (default): Direct integration with Anthropic's Claude API.
+
+Change SDK in `/settings` or edit `config.json` directly. When using OpenCode SDK, ensure OpenCode is running (`opencode` command).
 
 ## 📁 Project Structure
 
@@ -154,11 +170,9 @@ Generated `api_client.py` includes:
 ## 🗺️ Roadmap
 
 ### SDK Support
-Expanding support for additional SDKs and platforms:
-- **OpenCode** - Integration with OpenCode SDK
-- **Cursor Agent CLI** - Support for Cursor's agent CLI
-- **Droid** - Android SDK integration
-- **Codex** - Codex SDK support
+- ✅ **Claude** - Integration with Claude Code
+- ✅ **OpenCode** - Integration with OpenCode
+- 🔄 **Codex** - Codex SDK support
 
 ### Fully Automated Extraction
 Adding browser agent capabilities for fully automated API extraction:
@@ -187,7 +201,7 @@ uv build
 ## 🔐 Requirements
 
 - Python 3.10+
-- Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable)
+- Claude Code / OpenCode
 - Playwright browsers installed
 
 ## 🤝 Contributing
