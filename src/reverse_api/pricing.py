@@ -1,6 +1,5 @@
 """Pricing models for different models."""
 
-
 MODEL_PRICING = {
     "claude-sonnet-4-5": {
         "input": 3.00,
@@ -23,18 +22,18 @@ MODEL_PRICING = {
         "cache_read": 0.10,
         "reasoning": 5.00,
     },
-    "google-gemini-3-flash": {
+    "gemini-3-flash": {
         "input": 0.5,
         "output": 3,
         "cache_creation": 1,
         "cache_read": 0.05,
         "reasoning": 3,
     },
-    "google-gemini-3-pro": {
+    "gemini-3-pro": {
         "input": 3,
         "output": 12,
-        "cache_creation": 4.5, 
-        "cache_read": 0.20, 
+        "cache_creation": 4.5,
+        "cache_read": 0.20,
         "reasoning": 12,
     },
 }
@@ -56,12 +55,12 @@ _LITELLM_MODEL_MAP = {
         "claude-haiku-4-5",
         "anthropic.claude-haiku-4-5",
     ],
-    "google-gemini-3-flash": [
+    "gemini-3-flash": [
         "gemini-3-flash",
         "google/gemini-3-flash",
         "gemini-flash",
     ],
-    "google-gemini-3-pro": [
+    "gemini-3-pro": [
         "gemini-3-pro",
         "google/gemini-3-pro",
         "gemini-pro",
@@ -111,10 +110,16 @@ def _get_pricing_from_litellm(model_id: str) -> dict[str, float] | None:
                 # We need to multiply by 1,000,000 to get per-million cost
                 pricing = {
                     "input": litellm_pricing.get("input_cost_per_token", 0) * 1_000_000,
-                    "output": litellm_pricing.get("output_cost_per_token", 0) * 1_000_000,
-                    "cache_creation": litellm_pricing.get("cache_creation_input_token_cost", 0) * 1_000_000,
-                    "cache_read": litellm_pricing.get("cache_read_input_token_cost", 0) * 1_000_000,
-                    "reasoning": litellm_pricing.get("output_cost_per_token", 0) * 1_000_000,
+                    "output": litellm_pricing.get("output_cost_per_token", 0)
+                    * 1_000_000,
+                    "cache_creation": litellm_pricing.get(
+                        "cache_creation_input_token_cost", 0
+                    )
+                    * 1_000_000,
+                    "cache_read": litellm_pricing.get("cache_read_input_token_cost", 0)
+                    * 1_000_000,
+                    "reasoning": litellm_pricing.get("output_cost_per_token", 0)
+                    * 1_000_000,
                 }
 
                 if pricing["input"] > 0 or pricing["output"] > 0:
@@ -154,6 +159,10 @@ def calculate_cost(
     Returns:
         Total cost in USD
     """
+    # Normalize model name to canonical pricing key
+    if model_id in _MODEL_NAME_NORMALIZE:
+        model_id = _MODEL_NAME_NORMALIZE[model_id]
+
     if model_id in MODEL_PRICING:
         pricing = MODEL_PRICING[model_id]
     elif model_id and (litellm_pricing := _get_pricing_from_litellm(model_id)):
