@@ -23,6 +23,7 @@ CLI tool that captures browser traffic and automatically generates production-re
   - [Agent Mode](#agent-mode)
 - [Configuration](#-configuration)
   - [Model Selection](#model-selection)
+  - [💸 Free Models with Antigravity](#-free-model-options-with-antigravity)
   - [Agent Configuration](#agent-configuration)
   - [SDK Selection](#sdk-selection)
 - [CLI Commands](#-cli-commands)
