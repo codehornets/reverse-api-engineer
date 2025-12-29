@@ -51,7 +51,7 @@ class BaseEngineer(ABC):
 
         # Handle existing folder - append suffix if needed
         counter = 2
-        while local_dir.exists():
+        while local_dir.exists() and counter < 1000:
             folder_name = f"{base_name}_{counter}"
             local_dir = Path.cwd() / "scripts" / folder_name
             counter += 1
@@ -196,8 +196,10 @@ After testing, provide your final response with:
 Your final output should confirm that the files have been created and provide a brief summary of what was accomplished. Do not include the full code in your response - just confirm the files were saved and summarize the key findings.
 """
         if self.additional_instructions:
-            base_prompt += f"\n\nAdditional instructions:\n{self.additional_instructions}"
-        
+            base_prompt += (
+                f"\n\nAdditional instructions:\n{self.additional_instructions}"
+            )
+
         return base_prompt
 
     @abstractmethod

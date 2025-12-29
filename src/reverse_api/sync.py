@@ -85,7 +85,8 @@ class SyncHandler(FileSystemEventHandler):
             # Copy to destination
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(source, dest)
-            self.file_count += 1
+            if dest.exists():
+                self.file_count += 1
 
         # Update last sync time
         self.last_sync_time = time.time()
