@@ -5,19 +5,18 @@ Combines browser automation via MCP with simultaneous API reverse engineering.
 
 import asyncio
 import logging
-from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
-from claude_agent_sdk import (
-    ClaudeSDKClient,
-    ClaudeAgentOptions,
-    AssistantMessage,
-    TextBlock,
-    ToolUseBlock,
-    ToolResultBlock,
-    ResultMessage,
-)
 import httpx
+from claude_agent_sdk import (
+    AssistantMessage,
+    ClaudeAgentOptions,
+    ClaudeSDKClient,
+    ResultMessage,
+    TextBlock,
+    ToolResultBlock,
+    ToolUseBlock,
+)
 
 from .base_engineer import BaseEngineer
 from .engineer import ClaudeEngineer
