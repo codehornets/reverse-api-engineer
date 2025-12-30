@@ -18,7 +18,6 @@ from claude_agent_sdk import (
     ToolUseBlock,
 )
 
-from .base_engineer import BaseEngineer
 from .engineer import ClaudeEngineer
 from .opencode_engineer import OpenCodeEngineer, debug_log
 from .utils import get_har_dir
@@ -38,7 +37,7 @@ class ClaudeAutoEngineer(ClaudeEngineer):
         run_id: str,
         prompt: str,
         model: str,
-        output_dir: Optional[str] = None,
+        output_dir: str | None = None,
         **kwargs,
     ):
         """Initialize auto engineer with expected HAR path (created by MCP)."""
@@ -59,7 +58,8 @@ class ClaudeAutoEngineer(ClaudeEngineer):
 
     def _build_auto_prompt(self) -> str:
         """Build autonomous browsing + engineering prompt."""
-        return f"""You are an autonomous AI agent with browser control via MCP tools. Your mission is to browse, monitor network traffic, and generate production-ready Python API code.
+        return f"""You are an autonomous AI agent with browser control via MCP tools.
+        Your mission is to browse, monitor network traffic, and generate production-ready Python API code.
 
 <mission>
 {self.prompt}
@@ -83,7 +83,8 @@ Use browser MCP tools to accomplish the mission goal:
 - And other browser MCP tools available
 
 ### Phase 2: MONITOR
-While browsing, periodically call `browser_network_requests()` to monitor API traffic in real-time if needed, keep in mind that you will also have access to the full network traffic when closing the browser:
+While browsing, periodically call `browser_network_requests()` to monitor API traffic in real-time.
+Keep in mind that you will also have access to the full network traffic when closing the browser:
 - Analyze requests and responses
 - Identify authentication patterns (cookies, tokens, headers)
 - Note API endpoints, methods, parameters
@@ -141,7 +142,7 @@ Your final response should confirm the files were created and provide a brief su
 - Any limitations or caveats
 """
 
-    async def analyze_and_generate(self) -> Optional[Dict[str, Any]]:
+    async def analyze_and_generate(self) -> Dict[str, Any] | None:
         """Run auto mode with MCP browser integration."""
         self.ui.header(self.run_id, self.prompt, self.model)
         self.ui.start_analysis()
@@ -183,9 +184,9 @@ Your final response should confirm the files were created and provide a brief su
                 async for message in client.receive_response():
                     # Check for usage metadata
                     if hasattr(message, "usage") and isinstance(
-                        getattr(message, "usage"), dict
+                        message.usage, dict
                     ):
-                        self.usage_metadata.update(getattr(message, "usage"))
+                        self.usage_metadata.update(message.usage)
 
                     if isinstance(message, AssistantMessage):
                         last_tool_name = None
@@ -314,7 +315,7 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
     """Auto mode using OpenCode SDK: Register MCP server dynamically."""
 
     def __init__(
-        self, run_id: str, prompt: str, output_dir: Optional[str] = None, **kwargs
+        self, run_id: str, prompt: str, output_dir: str | None = None, **kwargs
     ):
         """Initialize auto engineer with expected HAR path (created by MCP)."""
         # Calculate expected HAR path - MCP will create it during execution
@@ -336,7 +337,7 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
         # Reuse the same prompt from ClaudeAutoEngineer
         return ClaudeAutoEngineer._build_auto_prompt(self)
 
-    async def analyze_and_generate(self) -> Optional[Dict[str, Any]]:
+    async def analyze_and_generate(self) -> Dict[str, Any] | None:
         """Run auto mode with OpenCode MCP integration."""
         self.opencode_ui.header(self.run_id, self.prompt, self.opencode_model)
         self.opencode_ui.start_analysis()
@@ -418,7 +419,7 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
                 # Wait for events to complete
                 try:
                     await asyncio.wait_for(event_task, timeout=600.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     self._last_error = "Session timed out (10 min)"
                     self.opencode_ui.error(self._last_error)
 
