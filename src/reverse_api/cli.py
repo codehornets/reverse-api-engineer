@@ -20,6 +20,7 @@ from .engineer import run_reverse_engineering
 from .messages import MessageStore
 from .session import SessionManager
 from .tui import (
+    ERROR_CTA,
     MODE_COLORS,
     THEME_DIM,
     THEME_PRIMARY,
@@ -187,17 +188,8 @@ def prompt_interactive_options(
         mode = mode_state["mode"]
         mode_color = MODE_COLORS.get(mode, THEME_PRIMARY)
 
-        context = ""
-        if mode == "engineer":
-            try:
-                history = session_manager.get_history(limit=1)
-                if history:
-                    context = f": {history[0]['run_id']}"
-            except Exception:
-                pass
-
         return HTML(
-            f'<style fg="{mode_color}">[{mode}{context}]</style> <style fg="{mode_color}" bold="true">&gt;</style> '
+            f'<style fg="{mode_color}">[{mode}]</style> <style fg="{mode_color}" bold="true">&gt;</style> '
         )
 
     if prompt is None:
@@ -228,6 +220,9 @@ def prompt_interactive_options(
 
     if prompt.startswith("/"):
         return {"command": prompt.lower(), "mode": mode_state["mode"]}
+
+    if prompt.strip() == "@help":
+        return {"command": "@help", "mode": mode_state["mode"]}
 
     # Return mode in all cases
     result_mode = mode_state["mode"]
@@ -351,6 +346,13 @@ def repl_loop():
                     handle_history(mode_color)
                 elif cmd == "/help" or cmd == "/commands":
                     handle_help(mode_color)
+                elif cmd == "@help":
+                    if current_mode == "engineer":
+                        handle_engineer_help(mode_color)
+                    elif current_mode == "agent":
+                        handle_agent_help(mode_color)
+                    elif current_mode == "manual":
+                        handle_manual_help(mode_color)
                 elif cmd.startswith("/messages"):
                     parts = cmd.split(maxsplit=1)
                     if len(parts) > 1:
@@ -377,100 +379,6 @@ def repl_loop():
                     console.print(" [dim]Usage:[/dim] @id <run_id> [instructions]")
                     console.print(" [dim]       [/dim] <run_id> (to switch context)")
                     continue
-
-                # Parse tag
-                parsed = parse_engineer_prompt(raw_input)
-
-                target_run_id = parsed["run_id"]
-                is_fresh = parsed["fresh"]
-                user_text = parsed["prompt"]
-
-                main_prompt = None
-                add_instr = None
-
-                if parsed["is_tag_command"]:
-                    # Explicit @id command
-                    if not target_run_id:
-                        console.print(" [red]error:[/red] invalid @id syntax")
-                        continue
-
-                    # If fresh, user text is new prompt. Else, it's additive.
-                    if is_fresh:
-                        main_prompt = user_text if user_text else None
-                    else:
-                        add_instr = user_text if user_text else None
-
-                else:
-                    # Implicit mode - check if input is a valid run_id
-                    if session_manager.get_run(user_text):
-                        target_run_id = user_text
-                    else:
-                        # Input is neither a tag command nor a valid run ID
-                        console.print(f" [red]error:[/red] run '{user_text}' not found")
-                        console.print(" [dim]Use @id <run_id> or type a valid run ID[/dim]")
-                        continue
-
-                run_engineer(
-                    target_run_id,
-                    prompt=main_prompt,
-                    model=options.get("model"),
-                    additional_instructions=add_instr,
-                    is_fresh=is_fresh,
-                )
-                continue
-
-                # Parse tag
-                parsed = parse_engineer_prompt(raw_input)
-
-                target_run_id = parsed["run_id"]
-                is_fresh = parsed["fresh"]
-                user_text = parsed["prompt"]
-
-                main_prompt = None
-                add_instr = None
-
-                if parsed["is_tag_command"]:
-                    # Explicit @id command
-                    if not target_run_id:
-                        console.print(" [red]error:[/red] invalid @id syntax")
-                        continue
-
-                    # If fresh, user text is new prompt. Else, it's additive.
-                    if is_fresh:
-                        main_prompt = user_text if user_text else None
-                    else:
-                        add_instr = user_text if user_text else None
-
-                else:
-                    # Implicit mode - check if input is a valid run_id
-                    if session_manager.get_run(user_text):
-                        # Just context switching / selecting run
-                        # We do NOT run engineer automatically on selection unless instructed?
-                        # The original code ran engineer. But wait, if I select a run, do I want to RE-run it?
-                        # Usually user selects run to then do something.
-                        # But prompt says "remove last run fallback".
-
-                        target_run_id = user_text
-
-                        # If just run_id provided, maybe we just set context?
-                        # But run_engineer expects to DO something.
-                        # If run_engineer is called without new prompt, it uses old prompt.
-                        # Let's assume selecting a run_id triggers a re-run with existing prompt (default behavior)
-                        pass
-                    else:
-                        # Input is neither a tag command nor a valid run ID
-                        console.print(f" [red]error:[/red] run '{user_text}' not found")
-                        console.print(" [dim]Use @id <run_id> or type a valid run ID[/dim]")
-                        continue
-
-                run_engineer(
-                    target_run_id,
-                    prompt=main_prompt,
-                    model=options.get("model"),
-                    additional_instructions=add_instr,
-                    is_fresh=is_fresh,
-                )
-                continue
 
                 # Parse tag
                 parsed = parse_engineer_prompt(raw_input)
@@ -543,6 +451,7 @@ def repl_loop():
             return
         except Exception as e:
             console.print(f" [red]error:[/red] {e}")
+            console.print(f" [dim]{ERROR_CTA}[/dim]")
 
 
 def handle_settings(mode_color=THEME_PRIMARY):
@@ -896,6 +805,109 @@ def handle_history(mode_color=THEME_PRIMARY):
         console.print(" [dim]> not found[/dim]")
 
 
+def handle_manual_help(mode_color=THEME_PRIMARY):
+    """Show help specific to manual mode."""
+    from rich.table import Table
+
+    console.print()
+    console.print(" [bold white]Manual Mode Help[/bold white]")
+    console.print(" [dim]Launch a browser for manual interaction and capture traffic.[/dim]")
+    console.print()
+
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column(style=f"{mode_color} bold", justify="left", width=30)
+    table.add_column(style="white", justify="left")
+
+    table.add_row(
+        "<prompt>",
+        "Describe the task/goal for the session.\n[dim]Example: extract jobs from apple.com[/dim]"
+    )
+    table.add_row("", "")
+
+    table.add_row(
+        "Shift+Tab",
+        "Cycle to other modes (Engineer, Agent)."
+    )
+
+    console.print(table)
+    console.print()
+
+
+def handle_agent_help(mode_color=THEME_PRIMARY):
+    """Show help specific to agent mode."""
+    from rich.table import Table
+
+    console.print()
+    console.print(" [bold white]Agent Mode Help[/bold white]")
+    console.print(" [dim]Launch an autonomous AI agent to navigate and perform tasks.[/dim]")
+    console.print()
+
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column(style=f"{mode_color} bold", justify="left", width=30)
+    table.add_column(style="white", justify="left")
+
+    table.add_row(
+        "<prompt>",
+        "Instruction for the autonomous agent.\n[dim]Example: Go to google.com and search for 'OpenAI'[/dim]"
+    )
+    table.add_row("", "")
+
+    table.add_row(
+        "Shift+Tab",
+        "Cycle to other modes (Manual, Engineer)."
+    )
+
+    console.print(table)
+    console.print()
+
+
+def handle_engineer_help(mode_color=THEME_PRIMARY):
+    """Show help specific to engineer mode."""
+    from rich.table import Table
+
+    console.print()
+    console.print(" [bold white]Engineer Mode Help[/bold white]")
+    console.print(" [dim]Reverse engineer APIs from captured sessions (HAR files).[/dim]")
+    console.print()
+
+    # Syntax table
+    table = Table(show_header=False, box=None, padding=(0, 1))
+    table.add_column(style=f"{mode_color} bold", justify="left", width=30)
+    table.add_column(style="white", justify="left")
+
+    table.add_row(
+        "@id <run_id>",
+        "Switch context to a specific run ID.\n[dim]Example: @id abc123[/dim]"
+    )
+    table.add_row("", "")
+
+    table.add_row(
+        "@id <run_id> <prompt>",
+        "Run engineer on a specific run with instructions.\n[dim]Example: @id abc123 extract user profile[/dim]"
+    )
+    table.add_row("", "")
+
+    table.add_row(
+        "@id <run_id> --fresh <prompt>",
+        "Start fresh (ignore previous scripts) with new instructions.\n[dim]Example: @id abc123 --fresh restart analysis[/dim]"
+    )
+    table.add_row("", "")
+
+    table.add_row(
+        "<run_id>",
+        "Quick context switch (same as @id <run_id>).\n[dim]Example: abc123[/dim]"
+    )
+    table.add_row("", "")
+
+    table.add_row(
+        "<prompt>",
+        "Run engineer on the *current* context/latest run.\n[dim]Example: improve error handling[/dim]"
+    )
+
+    console.print(table)
+    console.print()
+
+
 def handle_help(mode_color=THEME_PRIMARY):
     """Show enhanced help with command details and examples."""
     from rich.table import Table
@@ -1203,6 +1215,7 @@ def run_agent_capture(prompt=None, url=None, reverse_engineer=False, model=None,
                 )
     except Exception as e:
         console.print(f" [red]agent mode error: {e}[/red]")
+        console.print(f" [dim]{ERROR_CTA}[/dim]")
         import traceback
 
         traceback.print_exc()
@@ -1289,6 +1302,7 @@ def run_auto_capture(prompt=None, url=None, model=None, output_dir=None):
 
     except Exception as e:
         console.print(f" [red]auto mode error: {e}[/red]")
+        console.print(f" [dim]{ERROR_CTA}[/dim]")
         import traceback
 
         traceback.print_exc()

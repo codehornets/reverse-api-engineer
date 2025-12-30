@@ -11,6 +11,8 @@ THEME_DIM = "#555555"
 THEME_SUCCESS = "#ff5f50"
 THEME_ERROR = "bold white on #ff5f50"
 
+ERROR_CTA = "If an unexpected error occured, please create an issue at https://github.com/kalil0321/reverse-api-engineer/issues/new"
+
 
 MODE_COLORS = {
     "manual": "#ff5f50",  # Coral Red
@@ -146,6 +148,7 @@ class ClaudeUI:
         """Display error message."""
         self.console.print()
         self.console.print(f" [dim]![/dim] [red]error:[/red] {message}")
+        self.console.print(f" [dim]{ERROR_CTA}[/dim]")
 
     def _summarize_input(self, tool_name: str, tool_input: dict) -> str:
         """Create a brief summary of tool input."""

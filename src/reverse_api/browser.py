@@ -17,6 +17,7 @@ from rich.console import Console
 from rich.status import Status
 
 from . import __version__
+from .tui import ERROR_CTA
 from .utils import get_har_dir, get_timestamp
 
 console = Console()
@@ -696,6 +697,7 @@ class AgentBrowser:
                 "error": "browser-use is required for agent mode. Install it with: pip install git+https://github.com/browser-use/browser-use.git@49a345fb19e9f12befc5cc1658e0033873892455",
             }
             console.print(f" [red]error:[/red] {result['error']}")
+            console.print(f" [dim]{ERROR_CTA}[/dim]")
             return result
 
         result = {"success": False, "message": None, "error": None}
@@ -710,6 +712,7 @@ class AgentBrowser:
             except ValueError as e:
                 result["error"] = str(e)
                 console.print(f" [red]error:[/red] {e}")
+                console.print(f" [dim]{ERROR_CTA}[/dim]")
                 return result
 
             # Validate API key
@@ -717,6 +720,7 @@ class AgentBrowser:
             if not is_valid:
                 result["error"] = error_msg
                 console.print(f" [red]error:[/red] {error_msg}")
+                console.print(f" [dim]{ERROR_CTA}[/dim]")
                 return result
 
             # Create appropriate LLM instance
@@ -733,6 +737,7 @@ class AgentBrowser:
                 except ImportError:
                     result["error"] = "Failed to initialize OpenAI LLM"
                     console.print(f" [red]error:[/red] {result['error']}")
+                    console.print(f" [dim]{ERROR_CTA}[/dim]")
                     return result
             elif provider == "google":
                 try:
@@ -742,10 +747,12 @@ class AgentBrowser:
                 except ImportError:
                     result["error"] = "Failed to initialize Google LLM"
                     console.print(f" [red]error:[/red] {result['error']}")
+                    console.print(f" [dim]{ERROR_CTA}[/dim]")
                     return result
             else:
                 result["error"] = f"Unsupported provider: {provider}"
                 console.print(f" [red]error:[/red] {result['error']}")
+                console.print(f" [dim]{ERROR_CTA}[/dim]")
                 return result
 
             suppress_browser_use_logs()
@@ -824,12 +831,14 @@ class AgentBrowser:
             except ValueError as e:
                 result["error"] = str(e)
                 console.print(f" [red]error:[/red] {e}")
+                console.print(f" [dim]{ERROR_CTA}[/dim]")
                 return result
 
             is_valid, error_msg = validate_api_key(provider, self.agent_provider)
             if not is_valid:
                 result["error"] = error_msg
                 console.print(f" [red]error:[/red] {error_msg}")
+                console.print(f" [dim]{ERROR_CTA}[/dim]")
                 return result
 
             console.print(" [dim]starting stagehand with har...[/dim]")
@@ -1015,6 +1024,7 @@ class AgentBrowser:
 
         except Exception as e:
             console.print(f" [red]error: {e}[/red]")
+            console.print(f" [dim]{ERROR_CTA}[/dim]")
             result = {"error": str(e)}
 
         self._save_metadata(get_timestamp(), result)

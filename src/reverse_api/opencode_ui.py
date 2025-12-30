@@ -6,6 +6,8 @@ from rich.console import Console
 from rich.live import Live
 from rich.text import Text
 
+from .tui import ERROR_CTA
+
 # Theme configuration (matching tui.py)
 THEME_PRIMARY = "#ff5f50"
 THEME_SECONDARY = "white"
@@ -218,6 +220,7 @@ class OpenCodeUI:
         """Display error message."""
         self.console.print()
         self.console.print(f" [dim]![/dim] [red]error:[/red] {message}")
+        self.console.print(f" [dim]{ERROR_CTA}[/dim]")
 
     def permission_requested(self, perm_type: str, title: str) -> None:
         """Display when a permission is requested."""
