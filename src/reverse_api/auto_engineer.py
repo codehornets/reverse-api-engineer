@@ -26,7 +26,9 @@ from .utils import get_har_dir
 
 # Suppress claude_agent_sdk logs
 logging.getLogger("claude_agent_sdk").setLevel(logging.WARNING)
-logging.getLogger("claude_agent_sdk._internal.transport.subprocess_cli").setLevel(logging.WARNING)
+logging.getLogger("claude_agent_sdk._internal.transport.subprocess_cli").setLevel(
+    logging.WARNING
+)
 
 
 class ClaudeAutoEngineer(ClaudeEngineer):
@@ -38,7 +40,7 @@ class ClaudeAutoEngineer(ClaudeEngineer):
         prompt: str,
         model: str,
         output_dir: Optional[str] = None,
-        **kwargs
+        **kwargs,
     ):
         """Initialize auto engineer with expected HAR path (created by MCP)."""
         # Calculate expected HAR path - MCP will create it during execution
@@ -52,7 +54,7 @@ class ClaudeAutoEngineer(ClaudeEngineer):
             prompt=prompt,
             model=model,
             output_dir=output_dir,
-            **kwargs
+            **kwargs,
         )
         self.mcp_run_id = run_id
 
@@ -150,7 +152,12 @@ Your final response should confirm the files were created and provide a brief su
         mcp_config = {
             "type": "stdio",
             "command": "npx",
-            "args": ["rae-playwright-mcp@latest", "run-mcp-server", "--run-id", self.mcp_run_id]
+            "args": [
+                "rae-playwright-mcp@latest",
+                "run-mcp-server",
+                "--run-id",
+                self.mcp_run_id,
+            ],
         }
 
         options = ClaudeAgentOptions(
@@ -220,7 +227,11 @@ Your final response should confirm the files were created and provide a brief su
                             return None
                         else:
                             script_path = str(self.scripts_dir / "api_client.py")
-                            local_path = str(self.local_scripts_dir / "api_client.py") if self.local_scripts_dir else None
+                            local_path = (
+                                str(self.local_scripts_dir / "api_client.py")
+                                if self.local_scripts_dir
+                                else None
+                            )
                             self.ui.success(script_path, local_path)
 
                             # Calculate estimated cost if we have usage data
@@ -304,11 +315,7 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
     """Auto mode using OpenCode SDK: Register MCP server dynamically."""
 
     def __init__(
-        self,
-        run_id: str,
-        prompt: str,
-        output_dir: Optional[str] = None,
-        **kwargs
+        self, run_id: str, prompt: str, output_dir: Optional[str] = None, **kwargs
     ):
         """Initialize auto engineer with expected HAR path (created by MCP)."""
         # Calculate expected HAR path - MCP will create it during execution
@@ -320,7 +327,7 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
             har_path=har_path,
             prompt=prompt,
             output_dir=output_dir,
-            **kwargs
+            **kwargs,
         )
         self.mcp_run_id = run_id
         self.mcp_name = None  # Will be set to unique name per session
@@ -367,12 +374,16 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
                     "config": {
                         "type": "local",
                         "command": [
-                            "npx", "-y", "rae-playwright-mcp@latest",
-                            "run-mcp-server", "--run-id", self.mcp_run_id
+                            "npx",
+                            "-y",
+                            "rae-playwright-mcp@latest",
+                            "run-mcp-server",
+                            "--run-id",
+                            self.mcp_run_id,
                         ],
                         "enabled": True,
                         "timeout": 30000,  # 30 seconds for MCP to start
-                    }
+                    },
                 }
 
                 try:
@@ -456,7 +467,11 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
 
             # Show session summary
             self.opencode_ui.session_summary(self.usage_metadata)
-            local_path = str(self.local_scripts_dir / "api_client.py") if self.local_scripts_dir else None
+            local_path = (
+                str(self.local_scripts_dir / "api_client.py")
+                if self.local_scripts_dir
+                else None
+            )
             self.opencode_ui.success(script_path, local_path)
 
             result_data: Dict[str, Any] = {
@@ -490,5 +505,5 @@ class OpenCodeAutoEngineer(OpenCodeEngineer):
                     ) as client:
                         await client.delete(f"/mcp/{self.mcp_name}")
                         debug_log(f"Cleaned up MCP server: {self.mcp_name}")
-                except:
+                except Exception:
                     pass  # Ignore cleanup errors
