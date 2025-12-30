@@ -43,9 +43,9 @@ class OpenCodeEngineer(BaseEngineer):
         # Pop OpenCode-specific kwargs before passing to parent class
         self.opencode_provider = kwargs.pop("opencode_provider", "anthropic")
         self.opencode_model = kwargs.pop("opencode_model", "claude-sonnet-4-5")
-        
+
         super().__init__(*args, **kwargs)
-        
+
         # Override UI with OpenCode-specific version
         self.opencode_ui = OpenCodeUI(verbose=kwargs.get("verbose", True))
         self.ui = self.opencode_ui  # Ensure base class uses our specialized UI
@@ -55,7 +55,7 @@ class OpenCodeEngineer(BaseEngineer):
 
     async def analyze_and_generate(self) -> Optional[Dict[str, Any]]:
         """Run the reverse engineering analysis with OpenCode."""
-        self.opencode_ui.header(self.run_id, self.prompt, self.opencode_model)
+        self.opencode_ui.header(self.run_id, self.prompt, self.opencode_model, self.sdk)
         self.opencode_ui.start_analysis()
 
         # Save the prompt to messages
@@ -153,7 +153,11 @@ class OpenCodeEngineer(BaseEngineer):
 
             # Show session summary before success message
             self.opencode_ui.session_summary(self.usage_metadata)
-            local_path = str(self.local_scripts_dir / "api_client.py") if self.local_scripts_dir else None
+            local_path = (
+                str(self.local_scripts_dir / "api_client.py")
+                if self.local_scripts_dir
+                else None
+            )
             self.opencode_ui.success(script_path, local_path)
 
             result_data: Dict[str, Any] = {
@@ -442,21 +446,21 @@ class OpenCodeEngineer(BaseEngineer):
             else:
                 cost = api_cost
 
-            self.usage_metadata["input_tokens"] = self.usage_metadata.get(
-                "input_tokens", 0
-            ) + input_tokens
-            self.usage_metadata["output_tokens"] = self.usage_metadata.get(
-                "output_tokens", 0
-            ) + output_tokens
-            self.usage_metadata["reasoning_tokens"] = self.usage_metadata.get(
-                "reasoning_tokens", 0
-            ) + reasoning_tokens
-            self.usage_metadata["cache_read_tokens"] = self.usage_metadata.get(
-                "cache_read_tokens", 0
-            ) + cache_read
-            self.usage_metadata["cache_creation_tokens"] = self.usage_metadata.get(
-                "cache_creation_tokens", 0
-            ) + cache_write
+            self.usage_metadata["input_tokens"] = (
+                self.usage_metadata.get("input_tokens", 0) + input_tokens
+            )
+            self.usage_metadata["output_tokens"] = (
+                self.usage_metadata.get("output_tokens", 0) + output_tokens
+            )
+            self.usage_metadata["reasoning_tokens"] = (
+                self.usage_metadata.get("reasoning_tokens", 0) + reasoning_tokens
+            )
+            self.usage_metadata["cache_read_tokens"] = (
+                self.usage_metadata.get("cache_read_tokens", 0) + cache_read
+            )
+            self.usage_metadata["cache_creation_tokens"] = (
+                self.usage_metadata.get("cache_creation_tokens", 0) + cache_write
+            )
             self.usage_metadata["cost"] = self.usage_metadata.get("cost", 0) + cost
 
 

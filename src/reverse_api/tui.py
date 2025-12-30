@@ -56,14 +56,17 @@ class ClaudeUI:
         self._tool_count = 0
         self._tools_used: list[str] = []
 
-    def header(self, run_id: str, prompt: str, model: Optional[str] = None) -> None:
+    def header(self, run_id: str, prompt: str, model: Optional[str] = None, sdk: Optional[str] = None) -> None:
         """Display the session header."""
         from . import __version__
 
         self.console.print()
         self.console.print(f" [white]reverse-api[/white] [dim]v{__version__}[/dim]")
         self.console.print(f" [dim]━[/dim] [white]{run_id}[/white]")
-        self.console.print(f" [dim]model[/dim] [white]{model or '---'}[/white]")
+        if sdk:
+            self.console.print(f" [red]sdk[/red] [red]{sdk}[/red] [red]|[/red] [red]model[/red] [red]{model or '---'}[/red]")
+        else:
+            self.console.print(f" [dim]model[/dim] [white]{model or '---'}[/white]")
         self.console.print(
             f" [{THEME_PRIMARY}]task[/{THEME_PRIMARY}]   [white]{prompt}[/white]"
         )
@@ -196,11 +199,13 @@ def get_model_choices() -> list[dict]:
     ]
 
 
-def display_banner(console: Console):
+def display_banner(console: Console, sdk: Optional[str] = None, model: Optional[str] = None):
     """Display ultra-minimalist banner."""
     console.print()
     console.print(f"  [bold white]reverse-api[/bold white]")
     console.print(f"  [bold {THEME_PRIMARY}]━━[/bold {THEME_PRIMARY}]")
+    if sdk and model:
+        console.print(f"  [red]sdk[/red] [red]{sdk}[/red] [red]|[/red] [red]model[/red] [red]{model}[/red]")
     console.print()
     console.print(f"  [dim white]AI agents for API reverse engineering.[/dim white]")
     console.print()

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+import re
 import questionary
 from questionary import Choice
 from rich.console import Console
@@ -13,6 +14,7 @@ from .utils import (
     get_history_path,
     get_har_dir,
     get_timestamp,
+    parse_engineer_prompt,
 )
 from .tui import (
     get_model_choices,
@@ -97,15 +99,37 @@ def prompt_interactive_options(
                     for cmd in commands:
                         if cmd.startswith(text):
                             yield Completion(cmd, start_position=-len(text))
-            # Run ID completion in engineer mode
+            # Tag completion in engineer mode
             elif mode_state["mode"] == "engineer" and text:
-                for run_id in self._get_run_ids():
-                    if run_id.startswith(text):
-                        yield Completion(
-                            run_id,
-                            start_position=-len(text),
-                            display_meta=self._get_run_meta(run_id),
-                        )
+                if text.startswith("@"):
+                    # Tag completion
+                    tags = ["@id", "@help"]  # @docs, @build coming in next phases
+
+                    # specific check for @id completion
+                    id_match = re.match(r"@id\s+(.*)", text)
+                    if id_match:
+                        prefix = id_match.group(1)
+                        for run_id in self._get_run_ids():
+                            if run_id.startswith(prefix):
+                                yield Completion(
+                                    run_id,
+                                    start_position=-len(prefix),
+                                    display_meta=self._get_run_meta(run_id),
+                                )
+                    else:
+                        # Suggest tags
+                        for tag in tags:
+                            if tag.startswith(text):
+                                yield Completion(tag, start_position=-len(text))
+
+                else:
+                    for run_id in self._get_run_ids():
+                        if run_id.startswith(text):
+                            yield Completion(
+                                run_id,
+                                start_position=-len(text),
+                                display_meta=self._get_run_meta(run_id),
+                            )
 
         def _get_run_ids(self):
             """Get all run IDs from history (newest first)."""
@@ -163,8 +187,18 @@ def prompt_interactive_options(
         """Generate prompt with current mode indicator."""
         mode = mode_state["mode"]
         mode_color = MODE_COLORS.get(mode, THEME_PRIMARY)
+
+        context = ""
+        if mode == "engineer":
+            try:
+                history = session_manager.get_history(limit=1)
+                if history:
+                    context = f": {history[0]['run_id']}"
+            except Exception:
+                pass
+
         return HTML(
-            f'<style fg="{mode_color}">[{mode}]</style> <style fg="{mode_color}" bold="true">&gt;</style> '
+            f'<style fg="{mode_color}">[{mode}{context}]</style> <style fg="{mode_color}" bold="true">&gt;</style> '
         )
 
     if prompt is None:
@@ -285,7 +319,14 @@ def main(ctx: click.Context):
 
 def repl_loop():
     """Main interactive loop for the CLI."""
-    display_banner(console)
+    # Get current SDK and model from config
+    sdk = config_manager.get("sdk", "claude")
+    if sdk == "opencode":
+        model = config_manager.get("opencode_model", "claude-sonnet-4-5")
+    else:
+        model = config_manager.get("claude_code_model", "claude-sonnet-4-5")
+
+    display_banner(console, sdk=sdk, model=model)
     console.print("  [dim]shift+tab to cycle modes: manual | engineer | agent[/dim]")
     display_footer(console)
 
@@ -330,14 +371,159 @@ def repl_loop():
 
             # Handle different modes
             if mode == "engineer":
-                # Engineer mode: only run reverse engineering on existing run_id
-                run_id = options.get("run_id")
-                if not run_id:
-                    console.print(
-                        " [red]error:[/red] enter a run_id to reverse engineer"
-                    )
+                # Engineer mode
+                raw_input = options.get("run_id")
+
+                # Handle empty input
+                if not raw_input:
+                    console.print(" [dim]Usage:[/dim] @id <run_id> [instructions]")
+                    console.print(" [dim]       [/dim] <run_id> (to switch context)")
                     continue
-                run_engineer(run_id, model=options.get("model"))
+
+                # Parse tag
+                parsed = parse_engineer_prompt(raw_input)
+
+                target_run_id = parsed["run_id"]
+                is_fresh = parsed["fresh"]
+                user_text = parsed["prompt"]
+
+                main_prompt = None
+                add_instr = None
+
+                if parsed["is_tag_command"]:
+                    # Explicit @id command
+                    if not target_run_id:
+                        console.print(" [red]error:[/red] invalid @id syntax")
+                        continue
+
+                    # If fresh, user text is new prompt. Else, it's additive.
+                    if is_fresh:
+                        main_prompt = user_text if user_text else None
+                    else:
+                        add_instr = user_text if user_text else None
+
+                else:
+                    # Implicit mode - check if input is a valid run_id
+                    if session_manager.get_run(user_text):
+                        target_run_id = user_text
+                    else:
+                        # Input is neither a tag command nor a valid run ID
+                        console.print(f" [red]error:[/red] run '{user_text}' not found")
+                        console.print(
+                            " [dim]Use @id <run_id> or type a valid run ID[/dim]"
+                        )
+                        continue
+
+                run_engineer(
+                    target_run_id,
+                    prompt=main_prompt,
+                    model=options.get("model"),
+                    additional_instructions=add_instr,
+                    is_fresh=is_fresh,
+                )
+                continue
+
+                # Parse tag
+                parsed = parse_engineer_prompt(raw_input)
+
+                target_run_id = parsed["run_id"]
+                is_fresh = parsed["fresh"]
+                user_text = parsed["prompt"]
+
+                main_prompt = None
+                add_instr = None
+
+                if parsed["is_tag_command"]:
+                    # Explicit @id command
+                    if not target_run_id:
+                        console.print(" [red]error:[/red] invalid @id syntax")
+                        continue
+
+                    # If fresh, user text is new prompt. Else, it's additive.
+                    if is_fresh:
+                        main_prompt = user_text if user_text else None
+                    else:
+                        add_instr = user_text if user_text else None
+
+                else:
+                    # Implicit mode - check if input is a valid run_id
+                    if session_manager.get_run(user_text):
+                        # Just context switching / selecting run
+                        # We do NOT run engineer automatically on selection unless instructed?
+                        # The original code ran engineer. But wait, if I select a run, do I want to RE-run it?
+                        # Usually user selects run to then do something.
+                        # But prompt says "remove last run fallback".
+
+                        target_run_id = user_text
+
+                        # If just run_id provided, maybe we just set context?
+                        # But run_engineer expects to DO something.
+                        # If run_engineer is called without new prompt, it uses old prompt.
+                        # Let's assume selecting a run_id triggers a re-run with existing prompt (default behavior)
+                        pass
+                    else:
+                        # Input is neither a tag command nor a valid run ID
+                        console.print(f" [red]error:[/red] run '{user_text}' not found")
+                        console.print(
+                            " [dim]Use @id <run_id> or type a valid run ID[/dim]"
+                        )
+                        continue
+
+                run_engineer(
+                    target_run_id,
+                    prompt=main_prompt,
+                    model=options.get("model"),
+                    additional_instructions=add_instr,
+                    is_fresh=is_fresh,
+                )
+                continue
+
+                # Parse tag
+                parsed = parse_engineer_prompt(raw_input)
+
+                target_run_id = parsed["run_id"]
+                is_fresh = parsed["fresh"]
+                user_text = parsed["prompt"]
+
+                main_prompt = None
+                add_instr = None
+
+                if parsed["is_tag_command"]:
+                    # Explicit @id command
+                    if not target_run_id:
+                        console.print(" [red]error:[/red] invalid @id syntax")
+                        continue
+
+                    # If fresh, user text is new prompt. Else, it's additive.
+                    if is_fresh:
+                        main_prompt = user_text if user_text else None
+                    else:
+                        add_instr = user_text if user_text else None
+
+                else:
+                    # Implicit mode
+                    # Check if input is just a run_id
+                    if session_manager.get_run(user_text):
+                        target_run_id = user_text
+                        # Just switching run, no new instructions
+                    else:
+                        # Implicit @id on latest run
+                        latest_runs = session_manager.get_history(limit=1)
+                        if not latest_runs:
+                            console.print(" [red]error:[/red] no runs found in history")
+                            continue
+                        target_run_id = latest_runs[0]["run_id"]
+
+                        # Treat input as additive instructions
+                        add_instr = user_text
+
+                run_engineer(
+                    target_run_id,
+                    prompt=main_prompt,
+                    model=options.get("model"),
+                    additional_instructions=add_instr,
+                    is_fresh=is_fresh,
+                )
                 continue
 
             if mode == "agent":
@@ -1052,7 +1238,15 @@ def engineer(run_id, model, output_dir):
     run_engineer(run_id, model=model, output_dir=output_dir)
 
 
-def run_engineer(run_id, har_path=None, prompt=None, model=None, output_dir=None):
+def run_engineer(
+    run_id,
+    har_path=None,
+    prompt=None,
+    model=None,
+    output_dir=None,
+    additional_instructions=None,
+    is_fresh=False,
+):
     """Shared logic for reverse engineering."""
     if not har_path or not prompt:
         # Load from history if possible
@@ -1064,9 +1258,11 @@ def run_engineer(run_id, har_path=None, prompt=None, model=None, output_dir=None
             if not har_path.exists():
                 console.print(f" [red]not found:[/red] {run_id}")
                 return None
-            prompt = "Reverse engineer captured APIs"  # Default
+            if not prompt:
+                prompt = "Reverse engineer captured APIs"  # Default
         else:
-            prompt = run_data["prompt"]
+            if not prompt:
+                prompt = run_data["prompt"]
             # Detect where it was saved
             paths = run_data.get("paths", {})
             har_dir = Path(paths.get("har_dir", get_har_dir(run_id, None)))
@@ -1086,6 +1282,8 @@ def run_engineer(run_id, har_path=None, prompt=None, model=None, output_dir=None
             opencode_provider=config_manager.get("opencode_provider", "anthropic"),
             opencode_model=config_manager.get("opencode_model", "claude-sonnet-4-5"),
             enable_sync=enable_sync,
+            additional_instructions=additional_instructions,
+            is_fresh=is_fresh,
         )
     else:
         result = run_reverse_engineering(
@@ -1096,6 +1294,8 @@ def run_engineer(run_id, har_path=None, prompt=None, model=None, output_dir=None
             output_dir=output_dir,
             sdk=sdk,
             enable_sync=enable_sync,
+            additional_instructions=additional_instructions,
+            is_fresh=is_fresh,
         )
 
     if result:
@@ -1104,16 +1304,12 @@ def run_engineer(run_id, har_path=None, prompt=None, model=None, output_dir=None
             # Automatically copy scripts to current directory with a readable name
             scripts_dir = Path(result["script_path"]).parent
             base_name = generate_folder_name(prompt, sdk=sdk)
-            folder_name = base_name
-            local_dir = Path.cwd() / "scripts" / folder_name
+            scripts_base_path = Path.cwd() / "scripts"
 
-            # Handle existing folder - append suffix if needed
-            counter = 2
-            while local_dir.exists():
-                folder_name = f"{base_name}_{counter}"
-                local_dir = Path.cwd() / "scripts" / folder_name
-                counter += 1
+            from .sync import get_available_directory
 
+            # Get available directory (won't overwrite existing non-empty dirs)
+            local_dir = get_available_directory(scripts_base_path, base_name)
             local_dir.mkdir(parents=True, exist_ok=True)
 
             import shutil
@@ -1125,7 +1321,7 @@ def run_engineer(run_id, har_path=None, prompt=None, model=None, output_dir=None
             console.print(" [dim]>[/dim] [white]decoding complete[/white]")
             console.print(f" [dim]>[/dim] [white]{result['script_path']}[/white]")
             console.print(
-                f" [dim]>[/dim] [white]copied to ./scripts/{folder_name}[/white]\n"
+                f" [dim]>[/dim] [white]copied to ./scripts/{local_dir.name}[/white]\n"
             )
         else:
             # With sync enabled, just show completion

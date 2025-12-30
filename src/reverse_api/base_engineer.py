@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 from .utils import get_scripts_dir, generate_folder_name
 from .tui import ClaudeUI
 from .messages import MessageStore
-from .sync import FileSyncWatcher
+from .sync import FileSyncWatcher, get_available_directory
 
 
 class BaseEngineer(ABC):
@@ -48,15 +48,10 @@ class BaseEngineer(ABC):
 
         # Generate local directory name
         base_name = generate_folder_name(self.prompt, sdk=self.sdk)
-        folder_name = base_name
-        local_dir = Path.cwd() / "scripts" / folder_name
+        scripts_base_path = Path.cwd() / "scripts"
 
-        # Handle existing folder - append suffix if needed
-        counter = 2
-        while local_dir.exists() and counter < 1000:
-            folder_name = f"{base_name}_{counter}"
-            local_dir = Path.cwd() / "scripts" / folder_name
-            counter += 1
+        # Get available directory (won't overwrite existing non-empty dirs)
+        local_dir = get_available_directory(scripts_base_path, base_name)
 
         self.local_scripts_dir = local_dir
 

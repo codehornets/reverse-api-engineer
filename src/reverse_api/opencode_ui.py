@@ -25,14 +25,25 @@ class OpenCodeUI:
         self._session_status: str = "idle"
         self._tools_used: list[str] = []
 
-    def header(self, run_id: str, prompt: str, model: Optional[str] = None) -> None:
+    def header(
+        self,
+        run_id: str,
+        prompt: str,
+        model: Optional[str] = None,
+        sdk: Optional[str] = None,
+    ) -> None:
         """Display the session header."""
         from . import __version__
 
         self.console.print()
         self.console.print(f" [white]reverse-api[/white] [dim]v{__version__}[/dim]")
         self.console.print(f" [dim]━[/dim] [white]{run_id}[/white]")
-        self.console.print(f" [dim]model[/dim] [white]{model or '---'}[/white]")
+        if sdk:
+            self.console.print(
+                f" [red]sdk[/red] [red]{sdk}[/red] [red]|[/red] [red]model[/red] [red]{model or '---'}[/red]"
+            )
+        else:
+            self.console.print(f" [dim]model[/dim] [white]{model or '---'}[/white]")
         self.console.print(
             f" [{THEME_PRIMARY}]task[/{THEME_PRIMARY}]   [white]{prompt}[/white]"
         )
@@ -54,9 +65,7 @@ class OpenCodeUI:
 
     def model_info(self, provider: str, model: str) -> None:
         """Display the actual provider and model being used."""
-        self.console.print(
-            f"  [dim]using: {provider}/{model}[/dim]"
-        )
+        self.console.print(f"  [dim]using: {provider}/{model}[/dim]")
 
     def start_streaming(self) -> None:
         """Start the live display for streaming updates."""
@@ -83,7 +92,6 @@ class OpenCodeUI:
             display.append(f"  ⟳ ", style=THEME_PRIMARY)
             display.append(f"{self._current_tool}", style="white")
             display.append(" running...\n", style=THEME_DIM)
-
 
         return display
 

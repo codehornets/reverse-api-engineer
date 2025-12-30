@@ -19,7 +19,9 @@ from .base_engineer import BaseEngineer
 
 # Suppress claude_agent_sdk logs
 logging.getLogger("claude_agent_sdk").setLevel(logging.WARNING)
-logging.getLogger("claude_agent_sdk._internal.transport.subprocess_cli").setLevel(logging.WARNING)
+logging.getLogger("claude_agent_sdk._internal.transport.subprocess_cli").setLevel(
+    logging.WARNING
+)
 
 
 class ClaudeEngineer(BaseEngineer):
@@ -27,7 +29,7 @@ class ClaudeEngineer(BaseEngineer):
 
     async def analyze_and_generate(self) -> Optional[Dict[str, Any]]:
         """Run the reverse engineering analysis with Claude."""
-        self.ui.header(self.run_id, self.prompt, self.model)
+        self.ui.header(self.run_id, self.prompt, self.model, self.sdk)
         self.ui.start_analysis()
         self.message_store.save_prompt(self._build_analysis_prompt())
 
@@ -97,7 +99,11 @@ class ClaudeEngineer(BaseEngineer):
                             return None
                         else:
                             script_path = str(self.scripts_dir / "api_client.py")
-                            local_path = str(self.local_scripts_dir / "api_client.py") if self.local_scripts_dir else None
+                            local_path = (
+                                str(self.local_scripts_dir / "api_client.py")
+                                if self.local_scripts_dir
+                                else None
+                            )
                             self.ui.success(script_path, local_path)
 
                             # Calculate estimated cost if we have usage data
@@ -184,6 +190,7 @@ def run_reverse_engineering(
     opencode_provider: Optional[str] = None,
     opencode_model: Optional[str] = None,
     enable_sync: bool = False,
+    is_fresh: bool = False,
 ) -> Optional[Dict[str, Any]]:
     """Run reverse engineering with the specified SDK.
 
@@ -192,6 +199,7 @@ def run_reverse_engineering(
         opencode_provider: Provider ID for OpenCode (e.g., "anthropic")
         opencode_model: Model ID for OpenCode (e.g., "claude-sonnet-4-5")
         enable_sync: Enable real-time file syncing during engineering
+        is_fresh: Whether to start fresh (ignore previous scripts)
     """
     if sdk == "opencode":
         from .opencode_engineer import OpenCodeEngineer
@@ -208,6 +216,7 @@ def run_reverse_engineering(
             opencode_model=opencode_model,
             enable_sync=enable_sync,
             sdk=sdk,
+            is_fresh=is_fresh,
         )
     else:
         engineer = ClaudeEngineer(
@@ -220,6 +229,7 @@ def run_reverse_engineering(
             verbose=verbose,
             enable_sync=enable_sync,
             sdk=sdk,
+            is_fresh=is_fresh,
         )
 
     # Start sync before analysis
