@@ -201,10 +201,11 @@ src/reverse_api/
 ~/.reverse-api/
 ├── config.json         # User configuration
 ├── history.json        # Run history with costs
-└── runs/{run_id}/      # Per-run data
-    ├── har/            # Captured traffic
-    ├── scripts/        # Generated API clients
+└── runs/               # Organized by data type
+    ├── har/{run_id}/   # Captured traffic per run
+    ├── scripts/{run_id}/ # Generated API clients per run
     └── messages/       # LLM conversation logs
+        └── {run_id}.jsonl
 ```
 
 ## Dependencies Management
