@@ -1,5 +1,6 @@
 """Rich Terminal UI for Claude SDK interactions."""
 
+from typing import Optional
 from rich.console import Console
 from rich.text import Text
 
