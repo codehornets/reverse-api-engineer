@@ -162,7 +162,6 @@ Your final response should confirm the files were created and provide a brief su
         self.ui.start_analysis()
         self.message_store.save_prompt(self._build_auto_prompt())
 
-
         mcp_config = {
             "type": "stdio",
             "command": "npx",

@@ -55,21 +55,21 @@ class SyncHandler(FileSystemEventHandler):
         """Check if a file is a temporary file that should be ignored."""
         path = Path(file_path)
         name = path.name
-        
+
         # Check for temporary file patterns
-        if name.endswith('.tmp') or '.tmp.' in name:
+        if name.endswith(".tmp") or ".tmp." in name:
             return True
-        
+
         # Check for __pycache__ directories
-        if '__pycache__' in path.parts:
+        if "__pycache__" in path.parts:
             return True
-        
+
         # Check for other common temporary patterns
-        if name.startswith('.') and name.endswith('.swp'):
+        if name.startswith(".") and name.endswith(".swp"):
             return True
-        if name.startswith('~'):
+        if name.startswith("~"):
             return True
-        
+
         return False
 
     def on_created(self, event: FileSystemEvent):
@@ -128,7 +128,7 @@ class SyncHandler(FileSystemEventHandler):
             # Check if source file exists before attempting to copy
             if not source.exists():
                 return
-            
+
             # Copy to destination
             dest.parent.mkdir(parents=True, exist_ok=True)
             try:
@@ -195,18 +195,18 @@ class FileSyncWatcher:
     def stop(self):
         """Stop watching and syncing."""
         self.stop_event.set()
-        
+
         # Process any remaining pending events before stopping
         # Give it a moment to process debounced events
         time.sleep(self.debounce_ms / 1000.0 + 0.1)
         self.handler.process_pending()
-        
+
         self.observer.stop()
         self.observer.join(timeout=2)
 
         if self.process_thread:
             self.process_thread.join(timeout=2)
-        
+
         # Perform final sync of all existing files to ensure nothing is missed
         self._final_sync()
 
@@ -220,22 +220,22 @@ class FileSyncWatcher:
         """Perform a final sync of all existing files in source directory."""
         if not self.source_dir.exists():
             return
-        
+
         for item in self.source_dir.rglob("*"):
             if item.is_file() and not self.handler._is_temporary_file(str(item)):
                 relative = item.relative_to(self.source_dir)
                 dest = self.dest_dir / relative
-                
+
                 # Only sync if destination doesn't exist or is older
-                if not dest.exists() or item.stat().st_mtime > dest.stat().st_mtime:
-                    try:
+                try:
+                    if not dest.exists() or item.stat().st_mtime > dest.stat().st_mtime:
                         dest.parent.mkdir(parents=True, exist_ok=True)
                         shutil.copy2(item, dest)
                         if self.handler.on_sync:
                             self.handler.on_sync(f"Synced {item.name}")
-                    except (FileNotFoundError, OSError):
-                        # File was deleted or inaccessible, skip silently
-                        pass
+                except (FileNotFoundError, OSError):
+                    # File was deleted or inaccessible, skip silently
+                    pass
 
     def get_status(self) -> dict:
         """Get current sync status."""
