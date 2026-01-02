@@ -669,6 +669,7 @@ class AgentBrowser:
 
         # Set before importing to ensure it takes effect
         os.environ["BROWSER_USE_LOGGING_LEVEL"] = "WARNING"
+        os.environ["BROWSER_USE_LOGGING_LEVEL"] = "WARNING"
 
         # Import browser-use after setting environment variable
         try:
@@ -785,7 +786,9 @@ class AgentBrowser:
             if agent_result and hasattr(agent_result, "final_result"):
                 final_result_attr = agent_result.final_result
                 final_message = (
-                    final_result_attr() if callable(final_result_attr) else final_result_attr
+                    final_result_attr()
+                    if callable(final_result_attr)
+                    else final_result_attr
                 )
 
             result["success"] = True

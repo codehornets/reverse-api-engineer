@@ -21,10 +21,11 @@ CLI tool that captures browser traffic and automatically generates production-re
   - [Agent Mode](#agent-mode)
 - [Configuration](#-configuration)
   - [Model Selection](#model-selection)
-  - [💸 Free Models with Antigravity](#-free-model-options-with-antigravity)
+  - [💸 Free Models with Antigravity](#free-model-options-with-antigravity)
   - [Agent Configuration](#agent-configuration)
   - [SDK Selection](#sdk-selection)
 - [CLI Commands](#-cli-commands)
+- [Claude Code Plugin](#-claude-code-plugin)
 - [Examples](#-examples)
 - [Development](#-development)
 - [Contributing](#-contributing)
@@ -189,6 +190,8 @@ Change in `/settings` or via CLI:
 reverse-api-engineer manual --model claude-sonnet-4-5
 ```
 
+If you use Opencode, look at the [models](https://models.dev). Some are free like `opencode/grok-code`).
+
 ### Free Model Options with Antigravity
 
 You can use free models via [Antigravity](https://github.com/NoeFabris/opencode-antigravity-auth) for API generation. See [available models](https://github.com/NoeFabris/opencode-antigravity-auth#available-models) for the full list.
@@ -260,6 +263,18 @@ Use these slash commands while in the CLI:
 - `/messages <run_id>` - View detailed message logs
 - `/help` - Show all commands
 - `/exit` - Quit
+
+## 🔌 Claude Code Plugin
+
+Install the plugin in [Claude Code](https://claude.com/claude-code):
+
+```bash
+claude # Open REPL
+/plugin marketplace add kalil0321/reverse-api-engineer
+/plugin install reverse-api-engineer@reverse-api-engineer
+```
+
+See [plugin documentation](plugins/reverse-api-engineer/README.md) for commands, agents, skills, and usage examples.
 
 ## 💡 Examples
 

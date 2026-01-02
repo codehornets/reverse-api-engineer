@@ -29,8 +29,10 @@ Both inherit from `BaseEngineer` (abstract base class) which defines the common 
 
 ### Data Flow
 1. Browser captures HAR → saved to `~/.reverse-api/runs/har/{run_id}`
+1. Browser captures HAR → saved to `~/.reverse-api/runs/har/{run_id}`
 2. Engineer analyzes HAR with LLM → generates Python scripts
 3. Scripts saved to:
+   - `~/.reverse-api/runs/scripts/{run_id}` (permanent)
    - `~/.reverse-api/runs/scripts/{run_id}` (permanent)
    - `./scripts/{descriptive_name}/` (local copy)
 
